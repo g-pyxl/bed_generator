@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEGLH Bed File Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>SEGLH Bed File Generator</h1>
+        <form method="post">
+            <div class="mb-3">
+                <label for="identifiers" class="form-label">Identifiers</label>
+                <textarea class="form-control" id="identifiers" name="identifiers" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="assembly" class="form-label">Select Assembly</label>
+                <select class="form-control" id="assembly" name="assembly">
+                    <option value="GRCh37">GRCh37 (hg19)</option>
+                    <option value="GRCh38">GRCh38 (hg38)</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="paddingCheckbox" onchange="togglePaddingInput()">
+                    <label class="form-check-label" for="paddingCheckbox">
+                        Enable Padding
+                    </label>
+                </div>
+                <input type="number" class="form-control" id="paddingInput" name="padding" style="display: none;" placeholder="Enter padding in base pairs">
+            </div>
+            <button type="submit" class="btn btn-primary">Generate BED File</button>
+        </form>
+    </div>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        function togglePaddingInput() {
+            var checkbox = document.getElementById('paddingCheckbox');
+            var input = document.getElementById('paddingInput');
+            input.style.display = checkbox.checked ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>

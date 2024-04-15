@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Results</h1>
+        <ul class="list-group">
+            {% for result in results %}
+            <li class="list-group-item">
+                <h5>MANE Transcript: {{ result.mane_transcript }}</h5>
+                <div>
+                    <strong>Region:</strong> {{ result.region }}<br>
+                    <strong>Start:</strong> {{ result.start }}<br>
+                    <strong>End:</strong> {{ result.end }}<br>
+                    <strong>Symbol:</strong> {{ result.symbol }}<br>
+                    <strong>Exons:</strong>
+                    <ul>
+                        {% for exon in result.exons %}
+                        <li>
+                            Exon ID: {{ exon.exon_id }}<br>
+                            Stable ID: {{ exon.stable_id }}<br>
+                            Stable ID Version: {{ exon.stable_id_version }}<br>
+                            Assembly: {{ exon.assembly }}<br>
+                            Start: {{ exon.loc_start }}<br>
+                            End: {{ exon.loc_end }}<br>
+                            Strand: {{ exon.loc_strand }}<br>
+                            Region: {{ exon.loc_region }}<br>
+                            Location Checksum: {{ exon.loc_checksum }}<br>
+                            Exon Checksum: {{ exon.exon_checksum }}<br>
+                            Exon Order: {{ exon.exon_order }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="/download" class="btn btn-primary">Download BED File</a>
+    </div>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
