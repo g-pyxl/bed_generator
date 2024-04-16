@@ -24,21 +24,19 @@
                             <td>{{ result.chromosome }}</td>
                             <td>{{ result.start }}</td>
                             <td>{{ result.end }}</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
+                            <td>{{ result.entrez_id }}</td>
+                            <td>{{ result.gene }}</td>
+                            <td>{{ result.accession }}</td>
                         </tr>
                     {% else %}
-                        {% for exon in result.exons %}
-                            <tr>
-                                <td>{{ exon.loc_region }}</td>
-                                <td>{{ exon.loc_start }}</td>
-                                <td>{{ exon.loc_end }}</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{ result.stable_id }}</td>
-                            </tr>
-                        {% endfor %}
+                        <tr>
+                            <td>{{ result.loc_region }}</td>
+                            <td>{{ result.loc_start }}</td>
+                            <td>{{ result.loc_end }}</td>
+                            <td>{{ result.entrez_id }}</td>
+                            <td>{{ result.gene }}</td>
+                            <td>{{ result.accession }}</td>
+                        </tr>
                     {% endif %}
                 {% endfor %}
             </tbody>

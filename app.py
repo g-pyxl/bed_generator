@@ -28,9 +28,9 @@ def process_identifiers(identifiers, assembly):
 
 def fetch_variant_info(rsid, assembly):
     if assembly == 'GRCh38':
-        ensembl_url = f"https://rest.ensembl.org/variation/human/{rsid}?content-type=application/json"
+        ensembl_url = f"https://rest.ensembl.org/vep/human/id/{rsid}?refseq=true&canonical=true;content-type=application/json"
     elif assembly == 'GRCh37':
-        ensembl_url = f"https://grch37.rest.ensembl.org/variation/human/{rsid}?content-type=application/json"
+        ensembl_url = f"https://grch37.rest.ensembl.org/vep/human/id/{rsid}?refseq=true&canonical=true;content-type=application/json"
     else:
         print(f"Invalid assembly: {assembly}")
         return None
@@ -40,18 +40,25 @@ def fetch_variant_info(rsid, assembly):
         if response.status_code == 200:
             data = response.json()
             if data:
-                mappings = data['mappings']
-                for mapping in mappings:
-                    if mapping['assembly_name'] == assembly:
-                        chrom = mapping['seq_region_name']
-                        start = mapping['start']
-                        end = mapping['end']
-                        return {
-                            'rsid': rsid,
-                            'chromosome': chrom,
-                            'start': start,
-                            'end': end
-                        }
+                for item in data:
+                    if 'transcript_consequences' in item:
+                        for consequence in item['transcript_consequences']:
+                            if 'transcript_id' in consequence and consequence['transcript_id'].startswith('NM') and 'canonical' in consequence and consequence['canonical']:
+                                accession = consequence['transcript_id']
+                                entrez_id = consequence['gene_id']
+                                gene = consequence['gene_symbol']
+                                chromosome = item['seq_region_name']
+                                start = item['start']
+                                end = item['end']
+                                return {
+                                    'rsid': rsid,
+                                    'accession': accession,
+                                    'entrez_id': entrez_id,
+                                    'gene': gene,
+                                    'chromosome': chromosome,
+                                    'start': start,
+                                    'end': end
+                                }
             else:
                 print(f"No data found for rsID {rsid}")
                 return None
@@ -75,7 +82,7 @@ def fetch_data_from_tark(identifier, assembly):
         response = requests.get(search_url, params=params)
         if response.status_code == 200:
             data = response.json()
-            print(data)
+            results = []
             max_version_transcript = None
             max_version = -1
             for item in data:
@@ -85,28 +92,21 @@ def fetch_data_from_tark(identifier, assembly):
                         if version > max_version:
                             max_version = version
                             max_version_transcript = item
-
             if max_version_transcript:
+                accession = f"{max_version_transcript['stable_id']}.{max_version_transcript['stable_id_version']}"
+                entrez_id = max_version_transcript['genes'][0]['stable_id'] if 'genes' in max_version_transcript and max_version_transcript['genes'] else None
                 exons = max_version_transcript.get('exons', [])
-                exon_info = []
                 for exon in exons:
-                    exon_info.append({
-                        'exon_id': exon['exon_id'],
-                        'stable_id': exon['stable_id'],
-                        'stable_id_version': exon['stable_id_version'],
-                        'assembly': exon['assembly'],
+                    results.append({
+                        'loc_region': exon['loc_region'],
                         'loc_start': exon['loc_start'],
                         'loc_end': exon['loc_end'],
-                        'loc_strand': exon['loc_strand'],
-                        'loc_region': exon['loc_region'],
-                        'loc_checksum': exon['loc_checksum'],
-                        'exon_checksum': exon['exon_checksum'],
-                        'exon_order': exon['exon_order']
+                        'accession': accession,
+                        'gene': identifier,
+                        'entrez_id': entrez_id
                     })
-                return [{
-                    'stable_id': max_version_transcript['stable_id'],
-                    'exons': exon_info
-                }]
+            if results:
+                return results
             else:
                 print("No results found for this identifier.")
                 return None
@@ -116,6 +116,6 @@ def fetch_data_from_tark(identifier, assembly):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
-    
+
 if __name__ == '__main__':
     app.run(debug=True)
