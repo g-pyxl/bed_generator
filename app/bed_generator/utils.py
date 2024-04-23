@@ -1,20 +1,4 @@
-from flask import Flask, render_template, request, jsonify
 import requests
-
-app = Flask(__name__)
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        identifiers = request.form['identifiers']
-        assembly = request.form['assembly']
-        padding_5 = request.form.get('padding_5', 0, type=int)  # Default 0 if not specified
-        padding_3 = request.form.get('padding_3', 0, type=int)  # Default 0 if not specified
-        results = process_identifiers(identifiers, assembly, padding_5, padding_3)
-        return render_template('results.html', results=results)
-    panels = fetch_panels_from_panelapp()  # Fetch panels for GET request
-    return render_template('index.html', panels=panels)
-
 
 def process_identifiers(identifiers, assembly, padding_5, padding_3):
     ids = identifiers.replace(',', '\n').split()
@@ -127,11 +111,6 @@ def fetch_data_from_tark(identifier, assembly):
         print(f"An error occurred: {e}")
         return None
 
-@app.route('/panels')
-def panels():
-    panel_data = fetch_panels_from_panelapp()
-    return render_template('index.html', panels=panel_data)
-
 def fetch_panels_from_panelapp():
     url = "https://panelapp.genomicsengland.co.uk/api/v1/panels/signedoff/"
     panels_list = []
@@ -155,14 +134,6 @@ def fetch_panels_from_panelapp():
 
     return panels_list
 
-
-@app.route('/get_genes_by_panel/<panel_id>')
-def get_genes_by_panel(panel_id):
-    include_amber = request.args.get('include_amber', 'false') == 'true'
-    include_red = request.args.get('include_red', 'false') == 'true'
-    gene_list = fetch_genes_for_panel(panel_id, include_amber, include_red)
-    return jsonify(gene_list=gene_list)
-
 def fetch_genes_for_panel(panel_id, include_amber, include_red):
     response = requests.get(f"https://panelapp.genomicsengland.co.uk/api/v1/panels/{panel_id}/")
     if response.status_code == 200:
@@ -177,6 +148,3 @@ def fetch_genes_for_panel(panel_id, include_amber, include_red):
         return genes
     else:
         return []
-
-if __name__ == '__main__':
-    app.run(debug=True)
