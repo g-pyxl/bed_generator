@@ -172,7 +172,7 @@ def fetch_genes_for_panel(panel_id, include_amber, include_red):
             confidence_levels.append('2')
         if include_red:
             confidence_levels.append('1')
-        genes = [gene['gene_data']['gene_symbol'] for gene in panel['genes'] if gene['confidence_level'] in confidence_levels]
+        genes = [{'symbol': gene['gene_data']['gene_symbol'], 'confidence': gene['confidence_level']} for gene in panel['genes'] if gene['confidence_level'] in confidence_levels]
         print(genes)
         return genes
     else:
