@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
 
 app = Flask(__name__)
@@ -8,23 +8,33 @@ def index():
     if request.method == 'POST':
         identifiers = request.form['identifiers']
         assembly = request.form['assembly']
-        results = process_identifiers(identifiers, assembly)
+        padding_5 = request.form.get('padding_5', 0, type=int)  # Default 0 if not specified
+        padding_3 = request.form.get('padding_3', 0, type=int)  # Default 0 if not specified
+        results = process_identifiers(identifiers, assembly, padding_5, padding_3)
         return render_template('results.html', results=results)
-    return render_template('index.html')
+    panels = fetch_panels_from_panelapp()  # Fetch panels for GET request
+    return render_template('index.html', panels=panels)
 
-def process_identifiers(identifiers, assembly):
+
+def process_identifiers(identifiers, assembly, padding_5, padding_3):
     ids = identifiers.replace(',', '\n').split()
     results = []
     for identifier in ids:
         if identifier.startswith('rs'):
+            # Handling rsIDs (SNPs) without padding
             result = fetch_variant_info(identifier, assembly)
             if result:
                 results.append(result)
         else:
+            # Handling other identifiers such as gene IDs with padding
             result = fetch_data_from_tark(identifier, assembly)
             if result:
+                for r in result:
+                    r['loc_start'] = max(0, r['loc_start'] - padding_5)  # Adjust start with 5' padding
+                    r['loc_end'] += padding_3  # Adjust end with 3' padding
                 results.extend(result)
     return results
+
 
 def fetch_variant_info(rsid, assembly):
     if assembly == 'GRCh38':
@@ -116,6 +126,51 @@ def fetch_data_from_tark(identifier, assembly):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+
+@app.route('/panels')
+def panels():
+    panel_data = fetch_panels_from_panelapp()
+    return render_template('index.html', panels=panel_data)
+
+def fetch_panels_from_panelapp():
+    url = "https://panelapp.genomicsengland.co.uk/api/v1/panels/signedoff/"
+    panels_list = []
+
+    while url:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            for panel in data['results']:
+                if panel['relevant_disorders'] and 'R' in panel['relevant_disorders'][-1]:
+                    # Assumes the 'R' code is always the last element
+                    r_code = panel['relevant_disorders'][-1]
+                    full_name = f"{r_code} - {panel['name']}"
+                else:
+                    full_name = panel['name']
+                panels_list.append((panel['id'], full_name))
+            url = data.get('next')  # Move to the next page if it exists
+        else:
+            print("Failed to fetch panels:", response.status_code)
+            break  # Exit loop if there is an error
+
+    return panels_list
+
+
+@app.route('/get_genes_by_panel/<panel_id>')
+def get_genes_by_panel(panel_id):
+    gene_list = fetch_genes_for_panel(panel_id)
+    return jsonify(gene_list=gene_list)
+
+def fetch_genes_for_panel(panel_id):
+    response = requests.get(f"https://panelapp.genomicsengland.co.uk/api/v1/panels/{panel_id}/")
+    if response.status_code == 200:
+        panel = response.json()
+        # Filter genes to include only those with a confidence_level of '3'
+        genes = [gene['gene_data']['gene_symbol'] for gene in panel['genes'] if gene['confidence_level'] == '3']
+        print(genes)
+        return genes
+    else:
+        return []
 
 if __name__ == '__main__':
     app.run(debug=True)
