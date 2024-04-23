@@ -158,15 +158,21 @@ def fetch_panels_from_panelapp():
 
 @app.route('/get_genes_by_panel/<panel_id>')
 def get_genes_by_panel(panel_id):
-    gene_list = fetch_genes_for_panel(panel_id)
+    include_amber = request.args.get('include_amber', 'false') == 'true'
+    include_red = request.args.get('include_red', 'false') == 'true'
+    gene_list = fetch_genes_for_panel(panel_id, include_amber, include_red)
     return jsonify(gene_list=gene_list)
 
-def fetch_genes_for_panel(panel_id):
+def fetch_genes_for_panel(panel_id, include_amber, include_red):
     response = requests.get(f"https://panelapp.genomicsengland.co.uk/api/v1/panels/{panel_id}/")
     if response.status_code == 200:
         panel = response.json()
-        # Filter genes to include only those with a confidence_level of '3'
-        genes = [gene['gene_data']['gene_symbol'] for gene in panel['genes'] if gene['confidence_level'] == '3']
+        confidence_levels = ['3']
+        if include_amber:
+            confidence_levels.append('2')
+        if include_red:
+            confidence_levels.append('1')
+        genes = [gene['gene_data']['gene_symbol'] for gene in panel['genes'] if gene['confidence_level'] in confidence_levels]
         print(genes)
         return genes
     else:

@@ -112,13 +112,13 @@
             </div>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="includeAmber">
+            <input class="form-check-input" type="checkbox" id="includeAmber" onchange="updateIdentifiers()">
             <label class="form-check-label" for="includeAmber">Include amber</label>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="includeRed">
+            <input class="form-check-input" type="checkbox" id="includeRed" onchange="updateIdentifiers()">
             <label class="form-check-label" for="includeRed">Include red</label>
-        </div>        
+        </div>       
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         function togglePaddingInput() {
@@ -143,8 +143,12 @@
 
         function updateIdentifiers() {
             var panelId = document.getElementById('panelDropdown').value;
+            var includeAmber = document.getElementById('includeAmber').checked;
+            var includeRed = document.getElementById('includeRed').checked;
+
             if (panelId) {
-                fetch(`/get_genes_by_panel/${panelId}`)
+                var url = `/get_genes_by_panel/${panelId}?include_amber=${includeAmber}&include_red=${includeRed}`;
+                fetch(url)
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById('identifiers').value = data.gene_list.join(', ');
