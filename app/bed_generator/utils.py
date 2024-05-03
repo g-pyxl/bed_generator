@@ -1,4 +1,185 @@
 import requests
+import sqlite3
+
+def connect_db():
+    conn = sqlite3.connect('transcript.db')
+    cursor = conn.cursor()
+    # Create tables if they do not exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS genes (
+            gene_id TEXT PRIMARY KEY,
+            stable_id TEXT NOT NULL,
+            stable_id_version INTEGER,
+            assembly TEXT,
+            loc_start INTEGER,
+            loc_end INTEGER,
+            loc_strand INTEGER,
+            loc_region TEXT,
+            loc_checksum TEXT,
+            name TEXT,
+            gene_checksum TEXT
+        );
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transcripts (
+            transcript_id TEXT PRIMARY KEY,
+            stable_id TEXT NOT NULL,
+            stable_id_version INTEGER,
+            assembly TEXT,
+            loc_start INTEGER,
+            loc_end INTEGER,
+            loc_strand INTEGER,
+            loc_region TEXT,
+            loc_checksum TEXT,
+            transcript_checksum TEXT,
+            biotype TEXT,
+            sequence TEXT,
+            gene_id TEXT,
+            three_prime_utr_start INTEGER,
+            three_prime_utr_end INTEGER,
+            three_prime_utr_seq TEXT,
+            three_prime_utr_checksum TEXT,
+            five_prime_utr_start INTEGER,
+            five_prime_utr_end INTEGER,
+            five_prime_utr_seq TEXT,
+            five_prime_utr_checksum TEXT,
+            mane_transcript TEXT,
+            mane_transcript_type TEXT,
+            FOREIGN KEY(gene_id) REFERENCES genes(gene_id)
+        );
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS exons (
+            exon_id INTEGER PRIMARY KEY,
+            stable_id TEXT NOT NULL,
+            stable_id_version INTEGER,
+            assembly TEXT,
+            loc_start INTEGER,
+            loc_end INTEGER,
+            loc_strand INTEGER,
+            loc_region TEXT,
+            loc_checksum TEXT,
+            exon_checksum TEXT,
+            transcript_id TEXT,
+            exon_order INTEGER,
+            FOREIGN KEY(transcript_id) REFERENCES transcripts(transcript_id)
+        );
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transcript_release_set (
+            release_set_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assembly TEXT,
+            shortname TEXT,
+            description TEXT,
+            release_date TEXT,
+            source TEXT,
+            transcript_id TEXT,
+            FOREIGN KEY(transcript_id) REFERENCES transcripts(transcript_id)
+        );
+    ''')
+    conn.commit()
+    return conn
+
+def store_transcript_data(conn, data):
+    cursor = conn.cursor()
+
+    # Loop through each transcript entry in the data
+    for entry in data:
+        print(entry)
+        # Generate transcript_id
+        transcript_id = f"{entry['stable_id']}.{entry['stable_id_version']}"
+
+        # Insert gene information
+        if 'genes' in entry:
+            for gene in entry['genes']:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO genes (gene_id, stable_id, stable_id_version, assembly, loc_start, loc_end, loc_strand, loc_region, loc_checksum, name, gene_checksum)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ''', (
+                    gene['stable_id'] + '.' + str(gene['stable_id_version']),
+                    gene['stable_id'],
+                    gene['stable_id_version'],
+                    gene['assembly'],
+                    gene['loc_start'],
+                    gene['loc_end'],
+                    gene['loc_strand'],
+                    gene['loc_region'],
+                    gene['loc_checksum'],
+                    gene.get('name', None),
+                    gene['gene_checksum']
+                ))
+
+        # Insert transcript information
+        cursor.execute('''
+            INSERT OR IGNORE INTO transcripts (
+                transcript_id, stable_id, stable_id_version, assembly, loc_start, loc_end, loc_strand, loc_region, loc_checksum, transcript_checksum, biotype, sequence, gene_id,
+                three_prime_utr_start, three_prime_utr_end, three_prime_utr_seq, three_prime_utr_checksum, five_prime_utr_start, five_prime_utr_end, five_prime_utr_seq, five_prime_utr_checksum,
+                mane_transcript, mane_transcript_type
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ''', (
+            transcript_id,
+            entry['stable_id'],
+            entry['stable_id_version'],
+            entry['assembly'],
+            entry['loc_start'],
+            entry['loc_end'],
+            entry['loc_strand'],
+            entry['loc_region'],
+            entry['loc_checksum'],
+            entry['transcript_checksum'],
+            entry['biotype'],
+            entry['sequence'],
+            entry['genes'][0]['stable_id'] + '.' + str(entry['genes'][0]['stable_id_version']) if 'genes' in entry and entry['genes'] else None,
+            entry.get('three_prime_utr_start', None),
+            entry.get('three_prime_utr_end', None),
+            entry.get('three_prime_utr_seq', None),
+            entry.get('three_prime_utr_checksum', None),
+            entry.get('five_prime_utr_start', None),
+            entry.get('five_prime_utr_end', None),
+            entry.get('five_prime_utr_seq', None),
+            entry.get('five_prime_utr_checksum', None),
+            entry.get('mane_transcript', None),
+            entry.get('mane_transcript_type', None)
+        ))
+
+        # Insert exons information
+        if 'exons' in entry:
+            for exon in entry['exons']:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO exons (exon_id, stable_id, stable_id_version, assembly, loc_start, loc_end, loc_strand, loc_region, loc_checksum, exon_checksum, transcript_id, exon_order)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ''', (
+                    exon['exon_id'],
+                    exon['stable_id'],
+                    exon['stable_id_version'],
+                    exon['assembly'],
+                    exon['loc_start'],
+                    exon['loc_end'],
+                    exon['loc_strand'],
+                    exon['loc_region'],
+                    exon['loc_checksum'],
+                    exon['exon_checksum'],
+                    transcript_id,
+                    exon['exon_order']
+                ))
+
+        # Insert transcript release set information
+        if 'transcript_release_set' in entry:
+            for release_set in entry['transcript_release_set']:
+                cursor.execute('''
+                    INSERT INTO transcript_release_set (assembly, shortname, description, release_date, source, transcript_id)
+                    VALUES (?, ?, ?, ?, ?, ?);
+                ''', (
+                    release_set['assembly'],
+                    release_set['shortname'],
+                    release_set['description'],
+                    release_set['release_date'],
+                    release_set['source'],
+                    transcript_id
+                ))
+
+    conn.commit()
 
 def process_identifiers(identifiers, assembly, padding_5, padding_3):
     ids = identifiers.replace(',', '\n').split()
@@ -76,10 +257,17 @@ def fetch_data_from_tark(identifier, assembly):
         response = requests.get(search_url, params=params)
         if response.status_code == 200:
             data = response.json()
+            # Update DB
+            print("Storing in db...")
+            conn = connect_db()
+            store_transcript_data(conn, data)
+            conn.close()
+            # Process json
             results = []
             max_version_transcript = None
             max_version = -1
             for item in data:
+                # Begin API call
                 if 'assembly' in item and item['assembly'] == assembly:
                     if item['stable_id'].startswith('NM'):
                         version = int(item['stable_id_version'])

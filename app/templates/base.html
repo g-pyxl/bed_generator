@@ -65,7 +65,7 @@
                         <a class="nav-link" href="#">Run Monitor</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Samplesheet Validator</a>
+                        <a class="nav-link {% if request.endpoint == 'samplesheet_validator.index' %}active{% endif %}" href="{{ url_for('samplesheet_validator.index') }}">SampleSheet Validator</a>
                     </li>
                 </ul>
             </div>
