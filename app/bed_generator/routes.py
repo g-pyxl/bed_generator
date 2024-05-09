@@ -1,6 +1,6 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, redirect, url_for, session
 from app.bed_generator import bed_generator_bp
-from app.bed_generator.utils import process_identifiers, fetch_panels_from_panelapp, fetch_genes_for_panel
+from app.bed_generator.utils import process_identifiers, fetch_panels_from_panelapp, fetch_genes_for_panel, get_panels_from_db, store_panels_in_db
 
 @bed_generator_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -10,14 +10,27 @@ def index():
         padding_5 = request.form.get('padding_5', 0, type=int)
         padding_3 = request.form.get('padding_3', 0, type=int)
         results = process_identifiers(identifiers, assembly, padding_5, padding_3)
-        return render_template('results.html', results=results)
-    panels = fetch_panels_from_panelapp()
+        session['results'] = results
+        return redirect(url_for('bed_generator.results'))
+    panels = get_panels_from_db()
     return render_template('bed_generator.html', panels=panels)
+
+@bed_generator_bp.route('/results')
+def results():
+    results = session.get('results', [])
+    return render_template('results.html', results=results)
 
 @bed_generator_bp.route('/panels')
 def panels():
+    panel_data = get_panels_from_db()
+    return jsonify(panel_data)
+
+@bed_generator_bp.route('/refresh_panels')
+def refresh_panels():
     panel_data = fetch_panels_from_panelapp()
-    return render_template('bed_generator.html', panels=panel_data)
+    store_panels_in_db(panel_data)
+    updated_panel_data = get_panels_from_db()
+    return jsonify(updated_panel_data)
 
 @bed_generator_bp.route('/get_genes_by_panel/<panel_id>')
 def get_genes_by_panel(panel_id):

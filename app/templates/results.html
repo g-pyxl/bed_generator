@@ -1,48 +1,51 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Results</title>
-</head>
-<body>
-    <h1>Results</h1>
+{% extends 'base.html' %}
+
+{% block title %}BED File Results{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">BED File Results</h1>
+    <div class="mb-3">
+        <a href="{{ url_for('bed_generator.index') }}" class="btn btn-secondary">Back to BED File Generator</a>
+    </div>
     {% if results %}
-        <table>
-            <thead>
-                <tr>
-                    <th>#Chr</th>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>EntrezID</th>
-                    <th>Gene</th>
-                    <th>Accession</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for result in results %}
-                    {% if 'rsid' in result %}
-                        <tr>
-                            <td>{{ result.chromosome }}</td>
-                            <td>{{ result.start }}</td>
-                            <td>{{ result.end }}</td>
-                            <td>{{ result.entrez_id }}</td>
-                            <td>{{ result.gene }}</td>
-                            <td>{{ result.accession }}</td>
-                        </tr>
-                    {% else %}
-                        <tr>
-                            <td>{{ result.loc_region }}</td>
-                            <td>{{ result.loc_start }}</td>
-                            <td>{{ result.loc_end }}</td>
-                            <td>{{ result.entrez_id }}</td>
-                            <td>{{ result.gene }}</td>
-                            <td>{{ result.accession }}</td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="mb-3">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>#Chr</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>EntrezID</th>
+                        <th>Gene</th>
+                        <th>Accession</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                        {% if 'rsid' in result %}
+                            <tr>
+                                <td>{{ result.chromosome }}</td>
+                                <td>{{ result.start }}</td>
+                                <td>{{ result.end }}</td>
+                                <td>{{ result.entrez_id }}</td>
+                                <td>{{ result.gene }}</td>
+                                <td>{{ result.accession }}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td>{{ result.loc_region }}</td>
+                                <td>{{ result.loc_start }}</td>
+                                <td>{{ result.loc_end }}</td>
+                                <td>{{ result.entrez_id }}</td>
+                                <td>{{ result.gene }}</td>
+                                <td>{{ result.accession }}</td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% else %}
         <p>No results found.</p>
     {% endif %}
-</body>
-</html>
+{% endblock %}

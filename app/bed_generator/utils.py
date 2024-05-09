@@ -1,5 +1,6 @@
 import requests
 import sqlite3
+import datetime
 
 def connect_db():
     conn = sqlite3.connect('transcript.db')
@@ -75,6 +76,28 @@ def connect_db():
             source TEXT,
             transcript_id TEXT,
             FOREIGN KEY(transcript_id) REFERENCES transcripts(transcript_id)
+        );
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS panels (
+            panel_id INTEGER PRIMARY KEY,
+            name TEXT,
+            disease_group TEXT,
+            disease_sub_group TEXT,
+            version TEXT,
+            version_created TEXT,
+            relevant_disorders TEXT,
+            last_updated TEXT
+        );
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS panel_genes (
+            panel_id INTEGER,
+            gene_symbol TEXT,
+            confidence_level TEXT,
+            PRIMARY KEY (panel_id, gene_symbol),
+            FOREIGN KEY (panel_id) REFERENCES panels (panel_id)
         );
     ''')
     conn.commit()
@@ -180,6 +203,72 @@ def store_transcript_data(conn, data):
                 ))
 
     conn.commit()
+
+def store_panels_in_db(panels_data):
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('DELETE FROM panels')
+    cursor.execute('DELETE FROM panel_genes')
+    
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    for panel in panels_data:
+        panel_id = panel['id']
+        name = panel['name']
+        disease_group = panel.get('disease_group', '')
+        disease_sub_group = panel.get('disease_sub_group', '')
+        version = panel['version']
+        version_created = panel['version_created']
+        relevant_disorders = ','.join(panel.get('relevant_disorders', []))
+        
+        cursor.execute('''
+            INSERT INTO panels (panel_id, name, disease_group, disease_sub_group, version, version_created, relevant_disorders, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (panel_id, name, disease_group, disease_sub_group, version, version_created, relevant_disorders, timestamp))
+        
+        for gene in panel.get('genes', []):
+            gene_symbol = gene['entity_name']
+            confidence_level = gene['confidence_level']
+            
+            cursor.execute('''
+                INSERT INTO panel_genes (panel_id, gene_symbol, confidence_level)
+                VALUES (?, ?, ?)
+            ''', (panel_id, gene_symbol, confidence_level))
+    
+    conn.commit()
+    conn.close()
+
+def get_panels_from_db():
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT panel_id, name, disease_group, disease_sub_group, relevant_disorders, last_updated FROM panels')
+    panels = cursor.fetchall()
+    
+    panel_data = []
+    for panel in panels:
+        panel_id, name, disease_group, disease_sub_group, relevant_disorders, last_updated = panel
+        
+        cursor.execute('SELECT gene_symbol, confidence_level FROM panel_genes WHERE panel_id = ?', (panel_id,))
+        genes = cursor.fetchall()
+        
+        if relevant_disorders:
+            r_code = relevant_disorders.split(',')[-1]
+            full_name = f"{r_code} - {name}"
+        else:
+            full_name = name
+        
+        panel_data.append({
+            'panel_id': panel_id,
+            'name': full_name,
+            'last_updated': last_updated,
+            'genes': [{'gene_symbol': gene[0], 'confidence_level': gene[1]} for gene in genes]
+        })
+    
+    conn.close()
+    
+    return panel_data
 
 def process_identifiers(identifiers, assembly, padding_5, padding_3):
     ids = identifiers.replace(',', '\n').split()
@@ -308,13 +397,16 @@ def fetch_panels_from_panelapp():
         if response.status_code == 200:
             data = response.json()
             for panel in data['results']:
-                if panel['relevant_disorders'] and 'R' in panel['relevant_disorders'][-1]:
-                    # Assumes the 'R' code is always the last element
-                    r_code = panel['relevant_disorders'][-1]
-                    full_name = f"{r_code} - {panel['name']}"
-                else:
-                    full_name = panel['name']
-                panels_list.append((panel['id'], full_name))
+                panel_data = {
+                    'id': panel['id'],
+                    'name': panel['name'],
+                    'disease_group': panel.get('disease_group', ''),
+                    'disease_sub_group': panel.get('disease_sub_group', ''),
+                    'relevant_disorders': panel.get('relevant_disorders', []),
+                    'version': panel['version'],
+                    'version_created': panel['version_created']
+                }
+                panels_list.append(panel_data)
             url = data.get('next')  # Move to the next page if it exists
         else:
             print("Failed to fetch panels:", response.status_code)

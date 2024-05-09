@@ -10,14 +10,14 @@
             margin-top: 20px;
         }
         .navbar-custom {
-            background-color: #004a99;  /* Dark blue background */
+            background-color: #004a99;
         }
         .navbar-custom .navbar-brand,
         .navbar-custom .navbar-nav .nav-link {
-            color: #ffffff;  /* White text */
+            color: #ffffff;
         }
         .padding-input {
-            display: none; /* Initially hidden */
+            display: none;
         }
         .spinner-border {
             display: inline-block;
@@ -70,13 +70,12 @@
             </div>
         </div>
     </nav>
-    <p></p>
     <div class="container">
         <h1 class="mb-4">BED File Generator</h1>
         <form method="post">
             <div class="mb-3">
                 <label for="identifiers" class="form-label">Identifiers (gene symbol or rsID)</label>
-                <div class="form-control" id="identifiers" name="identifiers" rows="3" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
+                <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
             </div>
             <div class="mb-3">
                 <label for="assembly" class="form-label">Genome Assembly</label>
@@ -92,10 +91,10 @@
                         Enable Padding
                     </label>
                 </div>
-                <input type="number" class="form-control padding-input" id="5-paddingInput" name="padding_5" placeholder="5' padding (in base pairs)">
-                <input type="number" class="form-control padding-input" id="3-paddingInput" name="padding_3" placeholder="3' padding (in base pairs)">
+                <input type="number" class="form-control padding-input" id="paddingInput5" name="padding_5" placeholder="5' padding (in base pairs)">
+                <input type="number" class="form-control padding-input" id="paddingInput3" name="padding_3" placeholder="3' padding (in base pairs)">
             </div>
-            <button type="submit" class="btn btn-primary" id="generateButton" onclick="updateIdentifiersInput()">
+            <button type="submit" class="btn btn-primary" id="generateButton">
                 <span id="buttonText">Generate BED File</span>
                 <span id="loadingMessage" style="display: none; font-style: italic;">Querying API, please wait...</span>
                 <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
@@ -103,18 +102,22 @@
         </form>
         <hr>
         <h2 class="mb-3">Import gene list from PanelApp</h2>
+        <div class="mb-3">
+            <button class="btn btn-secondary" onclick="refreshPanels()">Refresh Panel List</button>
+            <span class="ms-3" id="lastUpdated"></span>
+        </div>
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="panelDropdown" class="form-label">Select a panel</label>
                 <select class="form-control" id="panelDropdown" onchange="updateIdentifiers()">
                     <option value="">Select a panel...</option>
-                    {% for panel_id, panel_name in panels %}
-                        <option value="{{ panel_id }}">{{ panel_name }}</option>
+                    {% for panel in panels %}
+                        <option value="{{ panel.panel_id }}">{{ panel.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-6">
-                <label for="searchPanel" class="form-label">Filter</label>
+                <label for="searchPanel" class="form-label">Filter</label
                 <input type="text" id="searchPanel" class="form-control" placeholder="Type to search..." onkeyup="filterPanels()">
             </div>
         </div>
@@ -125,7 +128,8 @@
         <div class="form-check form-check-inline">
             <input class="form-check-input" type="checkbox" id="includeRed" onchange="updateIdentifiers()">
             <label class="form-check-label" for="includeRed">Include red</label>
-        </div>       
+        </div>
+    </div>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         function togglePaddingInput() {
@@ -141,11 +145,26 @@
                 .then(data => {
                     var select = document.getElementById('panelDropdown');
                     data.forEach(panel => {
-                        var option = new Option(panel.name, panel.id);
+                        var option = new Option(panel.name, panel.panel_id);
                         select.add(option);
                     });
                 })
                 .catch(error => console.error('Error loading panels:', error));
+        }
+
+        function refreshPanels() {
+            fetch('/refresh_panels')
+                .then(response => response.json())
+                .then(data => {
+                    var select = document.getElementById('panelDropdown');
+                    select.innerHTML = '<option value="">Select a panel...</option>';
+                    data.forEach(panel => {
+                        var option = new Option(panel.name, panel.panel_id);
+                        select.add(option);
+                    });
+                    document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
+                })
+                .catch(error => console.error('Error refreshing panels:', error));
         }
 
         function updateIdentifiers() {
@@ -193,15 +212,6 @@
             }
         }
 
-        function updateIdentifiersInput() {
-            var identifiersDiv = document.getElementById('identifiers');
-            var identifiersInput = document.createElement('input');
-            identifiersInput.type = 'hidden';
-            identifiersInput.name = 'identifiers';
-            identifiersInput.value = identifiersDiv.textContent;
-            document.querySelector('form').appendChild(identifiersInput);
-        }
-
         document.querySelector('form').addEventListener('submit', function() {
             var generateButton = document.getElementById('generateButton');
             var buttonText = document.getElementById('buttonText');
@@ -213,6 +223,8 @@
             loadingMessage.style.display = 'inline';
             loadingSpinner.style.display = 'inline-block';
         });
+
+        document.addEventListener('DOMContentLoaded', loadPanels);
     </script>
 </body>
 </html>
