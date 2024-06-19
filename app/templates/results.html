@@ -3,11 +3,14 @@
 {% block title %}BED File Results{% endblock %}
 
 {% block content %}
-    <h1 class="mb-4">BED File Results</h1>
+    <h1 class="mb-4"><p></p>BED File Results</h1>
     <div class="mb-3">
         <a href="{{ url_for('bed_generator.index') }}" class="btn btn-secondary">Back to BED File Generator</a>
     </div>
     {% if results %}
+        <div class="mb-3">
+            <button class="btn btn-primary" onclick="downloadBED()">Download BED File</button>
+        </div>
         <div class="mb-3">
             <table class="table table-bordered">
                 <thead>
@@ -45,7 +48,32 @@
                 </tbody>
             </table>
         </div>
+        <textarea id="bedContent" style="display: none;">{{ results | tojson }}</textarea>
     {% else %}
         <p>No results found.</p>
     {% endif %}
+    <script>
+        function downloadBED() {
+            var results = JSON.parse(document.getElementById('bedContent').value);
+            var content = '';
+            for (var i = 0; i < results.length; i++) {
+                var result = results[i];
+                if ('rsid' in result) {
+                    content += result.chromosome + '\t' + result.start + '\t' + result.end + '\t' +
+                            result.entrez_id + '\t' + result.gene + '\t' + result.accession + '\n';
+                } else {
+                    content += result.loc_region + '\t' + result.loc_start + '\t' + result.loc_end + '\t' +
+                            result.entrez_id + '\t' + result.gene + '\t' + result.accession + '\n';
+                }
+            }
+            var filename = 'output.bed';
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
 {% endblock %}

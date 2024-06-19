@@ -1,6 +1,8 @@
 import requests
 import sqlite3
 import datetime
+import os
+import json
 
 def connect_db():
     conn = sqlite3.connect('transcript.db')
@@ -108,7 +110,6 @@ def store_transcript_data(conn, data):
 
     # Loop through each transcript entry in the data
     for entry in data:
-        print(entry)
         # Generate transcript_id
         transcript_id = f"{entry['stable_id']}.{entry['stable_id_version']}"
 
@@ -165,6 +166,10 @@ def store_transcript_data(conn, data):
             entry.get('mane_transcript', None),
             entry.get('mane_transcript_type', None)
         ))
+
+        # Warning if MANE PLUS CLINICAL is found
+        if entry.get('mane_transcript_type') == 'MANE PLUS CLINICAL':
+            print(f"Warning: Transcript {transcript_id} has MANE PLUS CLINICAL type.")
 
         # Insert exons information
         if 'exons' in entry:
@@ -271,6 +276,8 @@ def get_panels_from_db():
     return panel_data
 
 def process_identifiers(identifiers, assembly, padding_5, padding_3):
+    conn = connect_db()
+    cursor = conn.cursor()
     ids = identifiers.replace(',', '\n').split()
     results = []
     for identifier in ids:
@@ -281,14 +288,63 @@ def process_identifiers(identifiers, assembly, padding_5, padding_3):
                 results.append(result)
         else:
             # Handling other identifiers such as gene IDs with padding
-            result = fetch_data_from_tark(identifier, assembly)
-            if result:
-                for r in result:
-                    r['loc_start'] = max(0, r['loc_start'] - padding_5)  # Adjust start with 5' padding
-                    r['loc_end'] += padding_3  # Adjust end with 3' padding
-                results.extend(result)
+            cursor.execute("SELECT stable_id FROM genes WHERE name = ? AND assembly = ?", (identifier, assembly))
+            gene_entry = cursor.fetchone()
+            if gene_entry:
+                stable_id = gene_entry[0]
+                print(f"{identifier} located in database, stable_id: {stable_id}")
+                
+                # Retrieve the MANE transcript for the gene using stable_id
+                cursor.execute("""
+                    SELECT t.transcript_id, t.stable_id, t.stable_id_version
+                    FROM transcripts t
+                    WHERE t.gene_id = (SELECT gene_id FROM genes WHERE stable_id = ?)
+                      AND t.mane_transcript_type = 'MANE SELECT'
+                    ORDER BY t.stable_id_version DESC
+                    LIMIT 1
+                """, (stable_id,))
+                
+                mane_transcript = cursor.fetchone()
+                if mane_transcript:
+                    transcript_id, stable_id, stable_id_version = mane_transcript
+                    print(f"MANE transcript for gene {identifier}: {stable_id}.{stable_id_version}")
+                    
+                    # Retrieve exons for the MANE transcript
+                    cursor.execute("""
+                        SELECT e.exon_id, e.stable_id, e.loc_start, e.loc_end, e.exon_order
+                        FROM exons e
+                        WHERE e.transcript_id = ?
+                        ORDER BY e.exon_order
+                    """, (transcript_id,))
+                    
+                    exons = cursor.fetchall()
+                    if exons:
+                        print(f"Exons for MANE transcript {stable_id}.{stable_id_version}:")
+                        for exon in exons:
+                            exon_id, exon_stable_id, loc_start, loc_end, exon_order = exon
+                            print(f"  Exon {exon_order}: {exon_stable_id} ({loc_start}-{loc_end})")
+                            results.append({
+                                'loc_region': exon['loc_region'],
+                                'loc_start': max(0, loc_start - padding_5),
+                                'loc_end': loc_end + padding_3,
+                                'accession': f"{stable_id}.{stable_id_version}",
+                                'gene': identifier,
+                                'entrez_id': stable_id
+                            })
+                    else:
+                        print(f"No exons found for MANE transcript {stable_id}.{stable_id_version}")
+                else:
+                    print(f"No MANE transcript found for gene {identifier}")
+                    result = fetch_data_from_tark(identifier, assembly)
+                    if result:
+                        for r in result:
+                            r['loc_start'] = max(0, r['loc_start'] - padding_5)  # Adjust start with 5' padding
+                            r['loc_end'] += padding_3  # Adjust end with 3' padding
+                        results.extend(result)
+            else:
+                print(f"{identifier} not found in the database.")
+    conn.close()
     return results
-
 
 def fetch_variant_info(rsid, assembly):
     if assembly == 'GRCh38':
@@ -356,6 +412,7 @@ def fetch_data_from_tark(identifier, assembly):
             max_version_transcript = None
             max_version = -1
             for item in data:
+                print(item.get('mane_transcript_type'))
                 # Begin API call
                 if 'assembly' in item and item['assembly'] == assembly:
                     if item['stable_id'].startswith('NM'):
@@ -424,7 +481,6 @@ def fetch_genes_for_panel(panel_id, include_amber, include_red):
         if include_red:
             confidence_levels.append('1')
         genes = [{'symbol': gene['gene_data']['gene_symbol'], 'confidence': gene['confidence_level']} for gene in panel['genes'] if gene['confidence_level'] in confidence_levels]
-        print(genes)
         return genes
     else:
         return []

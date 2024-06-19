@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GSTT Bioinformatics Suite{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <style>
         body {
             margin-top: 20px;
         }
         .navbar-custom {
-            background-color: #004a99;  /* Dark blue background */
+            background-color: #004a99;
         }
         .navbar-custom .navbar-brand,
         .navbar-custom .navbar-nav .nav-link {
-            color: #ffffff;  /* White text */
+            color: #ffffff;
         }
-        .padding-input {
-            display: none; /* Initially hidden */
+        .logo-container {
+            background-color: #ffffff;
+            padding: 5px;
+            border-radius: 5px;
+            margin-left: auto;
         }
         .spinner-border {
             display: inline-block;
@@ -45,9 +48,8 @@
             color: #999;
             font-style: italic;
         }
-
+        
     </style>
-    {% block styles %}{% endblock %}
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-custom">
@@ -57,25 +59,32 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'bed_generator.index' %}active{% endif %}" href="{{ url_for('bed_generator.index') }}">BED File Generator</a>
+                        <a class="nav-link active" aria-current="page" href="#">BED Generator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">BED Manager</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#">Run Monitor</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'samplesheet_validator.index' %}active{% endif %}" href="{{ url_for('samplesheet_validator.index') }}">SampleSheet Validator</a>
+                        <a class="nav-link" href="#">SampleSheet Validator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Adhoc Tools</a>
                     </li>
                 </ul>
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Synnovis Logo" height="50">
+                </div>
             </div>
         </div>
     </nav>
-    <p></p>
     <div class="container">
         {% block content %}{% endblock %}
     </div>
-    
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
