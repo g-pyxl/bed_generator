@@ -6,10 +6,11 @@ from app.bed_generator.utils import process_identifiers, fetch_panels_from_panel
 def index():
     if request.method == 'POST':
         identifiers = request.form['identifiers']
+        coordinates = request.form['coordinates']
         assembly = request.form['assembly']
         padding_5 = request.form.get('padding_5', 0, type=int)
         padding_3 = request.form.get('padding_3', 0, type=int)
-        results = process_identifiers(identifiers, assembly, padding_5, padding_3)
+        results = process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3)
         session['results'] = results
         return redirect(url_for('bed_generator.results'))
     panels = get_panels_from_db()

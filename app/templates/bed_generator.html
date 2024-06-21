@@ -195,10 +195,12 @@
 
             var identifiersDiv = document.getElementById('identifiers');
             var identifiers = identifiersDiv.textContent.trim();
+            var coordinates = document.getElementById('coordinates').value.trim();
 
             var form = event.target;
             var formData = new FormData(form);
             formData.append('identifiers', identifiers);
+            formData.append('coordinates', coordinates);
 
             fetch(form.action, {
             method: form.method,

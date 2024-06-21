@@ -275,12 +275,28 @@ def get_panels_from_db():
     
     return panel_data
 
-def process_identifiers(identifiers, assembly, padding_5, padding_3):
-    '''Process identifiers provided in form'''
+def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3):
     conn = connect_db()
     cursor = conn.cursor()
     ids = identifiers.replace(',', '\n').split()
     results = []
+    
+    # Process genomic coordinates
+    if coordinates:
+        coord_parts = coordinates.split(':')
+        if len(coord_parts) == 2:
+            chrom = coord_parts[0]
+            start, end = map(int, coord_parts[1].split('-'))
+            results.append({
+                'loc_region': chrom,
+                'loc_start': start,
+                'loc_end': end,
+                'accession': 'custom',
+                'gene': 'custom',
+                'entrez_id': 'custom'
+            })
+    
+    # Process other identifiers
     for identifier in ids:
         if identifier.startswith('rs'):
             # Handling rsIDs (SNPs) without padding
