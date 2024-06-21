@@ -1,13 +1,13 @@
 from flask import Flask
+from flask_session import Session
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = 'your-secret-key' # Default for debug, use system secret key in production
+    app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a real secret key
+    app.config['SESSION_TYPE'] = 'filesystem'
+    Session(app)
 
-    from app.bed_generator import bed_generator_bp
+    from .bed_generator import bed_generator_bp
     app.register_blueprint(bed_generator_bp, url_prefix='/bed_generator')
-
-    from app.samplesheet_validator import samplesheet_validator_bp
-    app.register_blueprint(samplesheet_validator_bp, url_prefix='/samplesheet_validator')
 
     return app

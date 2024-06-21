@@ -4,34 +4,38 @@
 
 {% block content %}
     <h1 class="mb-4"><p></p>BED File Generator</h1>
-        <form method="post">
-            <div class="mb-3">
-                <label for="identifiers" class="form-label">Identifiers (gene symbol or rsID)</label>
-                <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
+    <form method="post">
+        <div class="mb-3">
+            <label for="identifiers" class="form-label">Identifiers (gene symbol or rsID)</label>
+            <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
+        </div>
+        <div class="mb-3">
+            <label for="coordinates" class="form-label">Genomic Coordinates</label>
+            <input type="text" class="form-control" id="coordinates" name="coordinates" placeholder="Enter genomic coordinates (e.g., chr1:200-300)">
+        </div>
+        <div class="mb-3">
+            <label for="assembly" class="form-label">Genome Assembly</label>
+            <select class="form-control" id="assembly" name="assembly">
+                <option value="GRCh37">GRCh37 (hg19)</option>
+                <option value="GRCh38">GRCh38 (hg38)</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="paddingCheckbox" onchange="togglePaddingInput()">
+                <label class="form-check-label" for="paddingCheckbox">
+                    Enable Padding (for gene symbols and rsIDs only)
+                </label>
             </div>
-            <div class="mb-3">
-                <label for="assembly" class="form-label">Genome Assembly</label>
-                <select class="form-control" id="assembly" name="assembly">
-                    <option value="GRCh37">GRCh37 (hg19)</option>
-                    <option value="GRCh38">GRCh38 (hg38)</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="paddingCheckbox" onchange="togglePaddingInput()">
-                    <label class="form-check-label" for="paddingCheckbox">
-                        Enable Padding
-                    </label>
-                </div>
-                <input type="number" class="form-control padding-input" id="paddingInput5" name="padding_5" placeholder="5' padding (in base pairs)">
-                <input type="number" class="form-control padding-input" id="paddingInput3" name="padding_3" placeholder="3' padding (in base pairs)">
-            </div>
-            <button type="submit" class="btn btn-primary" id="generateButton">
-                <span id="buttonText">Generate BED File</span>
-                <span id="loadingMessage" style="display: none; font-style: italic;">Querying API, please wait...</span>
-                <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-            </button>
-        </form>
+            <input type="number" class="form-control padding-input" id="paddingInput5" name="padding_5" placeholder="5' padding (in base pairs)">
+            <input type="number" class="form-control padding-input" id="paddingInput3" name="padding_3" placeholder="3' padding (in base pairs)">
+        </div>
+        <button type="submit" class="btn btn-primary" id="generateButton">
+            <span id="buttonText">Generate BED File</span>
+            <span id="loadingMessage" style="display: none; font-style: italic;">Querying API, please wait...</span>
+            <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+        </button>
+    </form>
         <hr>
         <h2 class="mb-3">Select regions by panel</h2>
         <div class="row mb-3">

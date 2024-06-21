@@ -276,6 +276,7 @@ def get_panels_from_db():
     return panel_data
 
 def process_identifiers(identifiers, assembly, padding_5, padding_3):
+    '''Process identifiers provided in form'''
     conn = connect_db()
     cursor = conn.cursor()
     ids = identifiers.replace(',', '\n').split()
@@ -298,20 +299,21 @@ def process_identifiers(identifiers, assembly, padding_5, padding_3):
                 cursor.execute("""
                     SELECT t.transcript_id, t.stable_id, t.stable_id_version
                     FROM transcripts t
-                    WHERE t.gene_id = (SELECT gene_id FROM genes WHERE stable_id = ?)
+                    WHERE t.gene_id LIKE (SELECT '%' || stable_id || '%' FROM genes WHERE stable_id = ?)
                       AND t.mane_transcript_type = 'MANE SELECT'
                     ORDER BY t.stable_id_version DESC
                     LIMIT 1
                 """, (stable_id,))
                 
                 mane_transcript = cursor.fetchone()
-                if mane_transcript:
+                # if mane_transcript:
+                if 1 == 2:
                     transcript_id, stable_id, stable_id_version = mane_transcript
                     print(f"MANE transcript for gene {identifier}: {stable_id}.{stable_id_version}")
                     
                     # Retrieve exons for the MANE transcript
                     cursor.execute("""
-                        SELECT e.exon_id, e.stable_id, e.loc_start, e.loc_end, e.exon_order
+                        SELECT e.loc_region, e.stable_id, e.loc_start, e.loc_end, e.exon_order
                         FROM exons e
                         WHERE e.transcript_id = ?
                         ORDER BY e.exon_order
@@ -321,10 +323,11 @@ def process_identifiers(identifiers, assembly, padding_5, padding_3):
                     if exons:
                         print(f"Exons for MANE transcript {stable_id}.{stable_id_version}:")
                         for exon in exons:
-                            exon_id, exon_stable_id, loc_start, loc_end, exon_order = exon
+                            print(exon)
+                            loc_region, exon_stable_id, loc_start, loc_end, exon_order = exon
                             print(f"  Exon {exon_order}: {exon_stable_id} ({loc_start}-{loc_end})")
                             results.append({
-                                'loc_region': exon['loc_region'],
+                                'loc_region': loc_region,
                                 'loc_start': max(0, loc_start - padding_5),
                                 'loc_end': loc_end + padding_3,
                                 'accession': f"{stable_id}.{stable_id_version}",
