@@ -4,14 +4,15 @@
 
 {% block content %}
     <h1 class="mb-4"><p></p>BED File Generator</h1>
-    <form method="post">
+    <form method="post" id="bedGeneratorForm">
         <div class="mb-3">
             <label for="identifiers" class="form-label">Identifiers (gene symbol or rsID)</label>
             <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
         </div>
         <div class="mb-3">
             <label for="coordinates" class="form-label">Genomic Coordinates</label>
-            <input type="text" class="form-control" id="coordinates" name="coordinates" placeholder="Enter genomic coordinates (e.g., chr1:200-300)">
+            <input type="text" class="form-control" id="coordinates" name="coordinates" placeholder="Enter genomic coordinates (e.g., 1:200-300)">
+            <div id="coordinatesError" class="invalid-feedback"></div>
         </div>
         <div class="mb-3">
             <label for="assembly" class="form-label">Genome Assembly</label>
@@ -77,8 +78,93 @@
 {% endblock %}
 
 {% block scripts %}
+    {{ super() }}
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
+        function validateCoordinates(input) {
+            const regex = /^(chr)?([1-9]|1\d|2[0-3]):(\d+)-(\d+)$/i;
+            const match = input.match(regex);
+            
+            if (!match) {
+                return "Invalid format. Use 'chromosome:start-end' (e.g., 1:200-300 or chr1:200-300).";
+            }
+            
+            const [, , chromosome, start, end] = match;
+            if (parseInt(start) >= parseInt(end)) {
+                return "Start position must be less than end position.";
+            }
+            
+            return null; // No error
+        }
+
+        document.getElementById('bedGeneratorForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Always prevent default form submission
+
+            const coordinatesInput = document.getElementById('coordinates');
+            const coordinatesError = document.getElementById('coordinatesError');
+            const coordinates = coordinatesInput.value.trim();
+            
+            let hasError = false;
+
+            if (coordinates) {
+                const error = validateCoordinates(coordinates);
+                if (error) {
+                    coordinatesInput.classList.add('is-invalid');
+                    coordinatesError.textContent = error;
+                    coordinatesError.style.display = 'block';
+                    hasError = true;
+                } else {
+                    coordinatesInput.classList.remove('is-invalid');
+                    coordinatesError.style.display = 'none';
+                }
+            }
+
+            if (!hasError) {
+                // If no errors, proceed with form submission
+                const generateButton = document.getElementById('generateButton');
+                const buttonText = document.getElementById('buttonText');
+                const loadingMessage = document.getElementById('loadingMessage');
+                const loadingSpinner = document.getElementById('loadingSpinner');
+
+                generateButton.disabled = true;
+                buttonText.style.display = 'none';
+                loadingMessage.style.display = 'inline';
+                loadingSpinner.style.display = 'inline-block';
+
+                const form = event.target;
+                const formData = new FormData(form);
+
+                fetch(form.action, {
+                    method: form.method,
+                    body: formData
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.json();
+                    }
+                })
+                .then(data => {
+                    if (data && data.error) {
+                        // Handle server-side validation errors
+                        coordinatesInput.classList.add('is-invalid');
+                        coordinatesError.textContent = data.error;
+                        coordinatesError.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    generateButton.disabled = false;
+                    buttonText.style.display = 'inline';
+                    loadingMessage.style.display = 'none';
+                    loadingSpinner.style.display = 'none';
+                });
+            }
+        });
+
         function togglePaddingInput() {
             var paddingInputs = document.querySelectorAll('.padding-input');
             paddingInputs.forEach(input => {

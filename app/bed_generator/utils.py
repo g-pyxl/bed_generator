@@ -3,6 +3,7 @@ import sqlite3
 import datetime
 import os
 import json
+import re
 
 def connect_db():
     conn = sqlite3.connect('transcript.db')
@@ -275,6 +276,20 @@ def get_panels_from_db():
     
     return panel_data
 
+def validate_coordinates(coordinates):
+    regex = r'^(chr)?([1-9]|1\d|2[0-3]):(\d+)-(\d+)$'
+    match = re.match(regex, coordinates, re.IGNORECASE)
+    
+    if not match:
+        return "Invalid format. Use 'chromosome:start-end' (e.g., 1:200-300 or chr1:200-300)."
+    
+    chromosome, start, end = match.group(2), int(match.group(3)), int(match.group(4))
+    
+    if start >= end:
+        return "Start position must be less than end position."
+    
+    return None  # No error
+
 def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3):
     conn = connect_db()
     cursor = conn.cursor()
@@ -283,18 +298,21 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
     
     # Process genomic coordinates
     if coordinates:
+        error = validate_coordinates(coordinates)
+        if error:
+            raise ValueError(error)
+        
         coord_parts = coordinates.split(':')
-        if len(coord_parts) == 2:
-            chrom = coord_parts[0]
-            start, end = map(int, coord_parts[1].split('-'))
-            results.append({
-                'loc_region': chrom,
-                'loc_start': start,
-                'loc_end': end,
-                'accession': 'custom',
-                'gene': 'custom',
-                'entrez_id': 'custom'
-            })
+        chrom = coord_parts[0].lstrip('chr')  # Remove 'chr' if present
+        start, end = map(int, coord_parts[1].split('-'))
+        results.append({
+            'loc_region': chrom,
+            'loc_start': start,
+            'loc_end': end,
+            'accession': 'custom',
+            'gene': 'custom',
+            'entrez_id': 'custom'
+        })
     
     # Process other identifiers
     for identifier in ids:

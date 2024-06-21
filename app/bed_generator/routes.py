@@ -10,9 +10,20 @@ def index():
         assembly = request.form['assembly']
         padding_5 = request.form.get('padding_5', 0, type=int)
         padding_3 = request.form.get('padding_3', 0, type=int)
-        results = process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3)
-        session['results'] = results
-        return redirect(url_for('bed_generator.results'))
+        
+        try:
+            results = process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3)
+            session['results'] = results
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'redirect': url_for('bed_generator.results')})
+            else:
+                return redirect(url_for('bed_generator.results'))
+        except ValueError as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': str(e)}), 400
+            else:
+                return render_template('bed_generator.html', error=str(e), panels=get_panels_from_db())
+    
     panels = get_panels_from_db()
     return render_template('bed_generator.html', panels=panels)
 
