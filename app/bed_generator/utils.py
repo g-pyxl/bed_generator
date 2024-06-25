@@ -329,15 +329,15 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
                 stable_id = gene_entry[0]
                 print(f"{identifier} located in database, stable_id: {stable_id}")
                 
-                # Retrieve the MANE transcript for the gene using stable_id
+                # Retrieve the MANE transcript for the gene using stable_id and assembly
                 cursor.execute("""
                     SELECT t.transcript_id, t.stable_id, t.stable_id_version
                     FROM transcripts t
-                    WHERE t.gene_id LIKE (SELECT '%' || stable_id || '%' FROM genes WHERE stable_id = ?)
-                      AND t.mane_transcript_type = 'MANE SELECT'
+                    JOIN genes g ON t.gene_id = g.gene_id
+                    WHERE g.stable_id = ? AND t.assembly = ? AND t.mane_transcript_type = 'MANE SELECT'
                     ORDER BY t.stable_id_version DESC
                     LIMIT 1
-                """, (stable_id,))
+                """, (stable_id, assembly))
                 
                 mane_transcript = cursor.fetchone()
                 
@@ -349,15 +349,14 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
                     cursor.execute("""
                         SELECT e.loc_region, e.stable_id, e.loc_start, e.loc_end, e.exon_order
                         FROM exons e
-                        WHERE e.transcript_id = ?
+                        WHERE e.transcript_id = ? AND e.assembly = ?
                         ORDER BY e.exon_order
-                    """, (transcript_id,))
+                    """, (transcript_id, assembly))
                     
                     exons = cursor.fetchall()
                     if exons:
                         print(f"Exons for MANE transcript {stable_id}.{stable_id_version}:")
                         for exon in exons:
-                            print(exon)
                             loc_region, exon_stable_id, loc_start, loc_end, exon_order = exon
                             print(f"  Exon {exon_order}: {exon_stable_id} ({loc_start}-{loc_end})")
                             results.append({
@@ -371,15 +370,15 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
                     else:
                         print(f"No exons found for MANE transcript {stable_id}.{stable_id_version}")
                 else:
-                    print(f"No MANE transcript found for gene {identifier}")
+                    print(f"No MANE transcript found for gene {identifier} in assembly {assembly}")
                     result = fetch_data_from_tark(identifier, assembly)
                     if result:
                         for r in result:
-                            r['loc_start'] = max(0, r['loc_start'] - padding_5)  # Adjust start with 5' padding
-                            r['loc_end'] += padding_3  # Adjust end with 3' padding
+                            r['loc_start'] = max(0, r['loc_start'] - padding_5)
+                            r['loc_end'] += padding_3
                         results.extend(result)
             else:
-                print(f"{identifier} not found in the database.")
+                print(f"{identifier} not found in the database for assembly {assembly}.")
     conn.close()
     return results
 

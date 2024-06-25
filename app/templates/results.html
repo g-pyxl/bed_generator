@@ -24,8 +24,7 @@
                 <option value="hg19">hg19</option>
             </select>
         </div>
-        <div id="igv-div" style="padding-top: 10px; padding-bottom: 10px; border:1px solid lightgray"></div>
-        <div class="mb-3 mt-3">
+        <div class="mb-3">
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -62,6 +61,7 @@
                 </tbody>
             </table>
         </div>
+        <div id="igv-div" style="padding-top: 10px; padding-bottom: 10px; border:1px solid lightgray"></div>
         <textarea id="bedContent" style="display: none;">{{ results | tojson }}</textarea>
     {% else %}
         <p>No results found.</p>
