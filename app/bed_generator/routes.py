@@ -5,9 +5,9 @@ from app.bed_generator.utils import process_identifiers, fetch_panels_from_panel
 @bed_generator_bp.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        identifiers = request.form['identifiers']
-        coordinates = request.form['coordinates']
-        assembly = request.form['assembly']
+        identifiers = request.form.get('identifiers', '')
+        coordinates = request.form.get('coordinates', '')
+        assembly = request.form.get('assembly', '')
         padding_5 = request.form.get('padding_5', 0, type=int)
         padding_3 = request.form.get('padding_3', 0, type=int)
         
