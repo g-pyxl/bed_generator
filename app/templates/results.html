@@ -3,6 +3,14 @@
 {% block title %}BED File Results{% endblock %}
 
 {% block content %}
+    <style>
+        #igv-div {
+            height: 600px;
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+
     <h1 class="mb-4"><p></p>BED File Results</h1>
     <div class="mb-3">
         <a href="{{ url_for('bed_generator.index') }}" class="btn btn-secondary">Back to BED File Generator</a>
@@ -10,8 +18,14 @@
     {% if results %}
         <div class="mb-3">
             <button class="btn btn-primary" onclick="downloadBED()">Download BED File</button>
+            <button class="btn btn-primary" onclick="loadIGV()">View in IGV</button>
+            <select id="genome-select" class="form-select d-inline-block w-auto ml-2" onchange="changeGenome()">
+                <option value="hg38">hg38</option>
+                <option value="hg19">hg19</option>
+            </select>
         </div>
-        <div class="mb-3">
+        <div id="igv-div" style="padding-top: 10px; padding-bottom: 10px; border:1px solid lightgray"></div>
+        <div class="mb-3 mt-3">
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -52,9 +66,62 @@
     {% else %}
         <p>No results found.</p>
     {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/igv@2.10.5/dist/igv.min.js"></script>
     <script>
-        function downloadBED() {
+        let igvBrowser;
+
+        function loadIGV() {
+            var loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'igv-loading';
+            loadingIndicator.innerHTML = 'Loading IGV...';
+            document.getElementById('igv-div').appendChild(loadingIndicator);
+
             var results = JSON.parse(document.getElementById('bedContent').value);
+            var bedContent = createBedContent(results);
+            var genome = document.getElementById('genome-select').value;
+
+            if (!igvBrowser) {
+                var options = {
+                    genome: genome,
+                    tracks: [
+                        {
+                            name: "Generated BED",
+                            url: "data:application/bed," + encodeURIComponent(bedContent),
+                            format: "bed",
+                            displayMode: "EXPANDED"
+                        }
+                    ]
+                };
+
+                igv.createBrowser(document.getElementById('igv-div'), options)
+                    .then(function (browser) {
+                        igvBrowser = browser;
+                        document.getElementById('igv-loading').remove();
+                    })
+                    .catch(function(error) {
+                        console.error('Error creating IGV browser:', error);
+                        document.getElementById('igv-loading').innerHTML = 'Error loading IGV. Please try again.';
+                    });
+            } else {
+                igvBrowser.loadTrack({
+                    name: "Generated BED",
+                    url: "data:application/bed," + encodeURIComponent(bedContent),
+                    format: "bed",
+                    displayMode: "EXPANDED"
+                });
+                document.getElementById('igv-loading').remove();
+            }
+        }
+
+        function changeGenome() {
+            var genome = document.getElementById('genome-select').value;
+            if (igvBrowser) {
+                igvBrowser.loadGenome(genome);
+            }
+        }
+
+        function createBedContent(results) {
             var content = '';
             for (var i = 0; i < results.length; i++) {
                 var result = results[i];
@@ -66,6 +133,12 @@
                             result.entrez_id + '\t' + result.gene + '\t' + result.accession + '\n';
                 }
             }
+            return content;
+        }
+
+        function downloadBED() {
+            var results = JSON.parse(document.getElementById('bedContent').value);
+            var content = createBedContent(results);
             var filename = 'output.bed';
             var element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
