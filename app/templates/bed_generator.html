@@ -10,8 +10,8 @@
             <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
         </div>
         <div class="mb-3">
-            <label for="coordinates" class="form-label">Custom Genomic Range</label>
-            <input type="text" class="form-control" id="coordinates" name="coordinates" placeholder="Enter genomic coordinates (e.g., chr1:200-300)">
+            <label for="coordinates" class="form-label">Custom Genomic Range(s)</label>
+            <textarea class="form-control" id="coordinates" name="coordinates" rows="3" placeholder="Enter genomic coordinates (e.g., chr1:200-300), one per line"></textarea>
             <div id="coordinatesError" class="invalid-feedback"></div>
         </div>
         <div class="mb-3">
@@ -25,7 +25,7 @@
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="paddingCheckbox" onchange="togglePaddingInput()">
                 <label class="form-check-label" for="paddingCheckbox">
-                    Enable Padding (for gene symbols and rsIDs only)
+                    Enable Padding (applies to gene symbols and transcripts only)
                 </label>
             </div>
             <input type="number" class="form-control padding-input" id="paddingInput5" name="padding_5" placeholder="5' padding (in base pairs)">
@@ -82,18 +82,23 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         function validateCoordinates(input) {
-            const regex = /^(chr)?([1-9]|1\d|2[0-3]):(\d+)-(\d+)$/i;
-            const match = input.match(regex);
-            
-            if (!match) {
-                return "Invalid format. Use 'chromosome:start-end' (e.g., 1:200-300 or chr1:200-300).";
+            const lines = input.split('\n');
+            for (let line of lines) {
+                line = line.trim();
+                if (line === '') continue;
+                
+                const regex = /^(chr)?([1-9]|1\d|2[0-3]):(\d+)-(\d+)$/i;
+                const match = line.match(regex);
+                
+                if (!match) {
+                    return `Invalid format: ${line}. Use 'chromosome:start-end' (e.g., 1:200-300 or chr1:200-300).`;
+                }
+                
+                const [, , chromosome, start, end] = match;
+                if (parseInt(start) >= parseInt(end)) {
+                    return `Invalid range: ${line}. Start position must be less than end position.`;
+                }
             }
-            
-            const [, , chromosome, start, end] = match;
-            if (parseInt(start) >= parseInt(end)) {
-                return "Start position must be less than end position.";
-            }
-            
             return null; // No error
         }
     

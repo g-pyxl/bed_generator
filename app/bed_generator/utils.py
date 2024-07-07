@@ -341,7 +341,7 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
                 
                 mane_transcript = cursor.fetchone()
                 
-                if mane_transcript == '113':
+                if mane_transcript:
                     transcript_id, stable_id, stable_id_version = mane_transcript
                     print(f"MANE transcript for gene {identifier}: {stable_id}.{stable_id_version}")
                     

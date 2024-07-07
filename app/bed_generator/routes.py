@@ -12,7 +12,16 @@ def index():
         padding_3 = request.form.get('padding_3', 0, type=int)
         
         try:
-            results = process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3)
+            results = []
+            # Process identifiers (genes, rsIDs) only once
+            if identifiers.strip():
+                results.extend(process_identifiers(identifiers, '', assembly, padding_5, padding_3))
+            
+            # Process each coordinate separately
+            coordinate_list = [coord.strip() for coord in coordinates.split('\n') if coord.strip()]
+            for coord in coordinate_list:
+                results.extend(process_identifiers('', coord, assembly, padding_5, padding_3))
+            
             session['results'] = results
             return redirect(url_for('bed_generator.results'))
         except ValueError as e:

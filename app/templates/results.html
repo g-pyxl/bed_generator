@@ -9,6 +9,10 @@
             width: 100%;
             margin-top: 20px;
         }
+        .table-wrapper {
+            max-height: 400px; /* Adjust the height as needed */
+            overflow: auto;
+        }
     </style>
 
     <h1 class="mb-4"><p></p>BED File Results</h1>
@@ -24,7 +28,7 @@
                 <option value="hg19">hg19</option>
             </select>
         </div>
-        <div class="mb-3">
+        <div class="mb-3 table-wrapper">
             <table class="table table-bordered">
                 <thead>
                     <tr>
