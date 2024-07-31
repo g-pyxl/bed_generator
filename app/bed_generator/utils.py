@@ -302,4 +302,5 @@ def fetch_genes_for_panel(panel_id, include_amber, include_red):
         genes = [{'symbol': gene['gene_data']['gene_symbol'], 'confidence': gene['confidence_level']} for gene in panel['genes'] if gene['confidence_level'] in confidence_levels]
         return genes
     else:
+        print(f"Failed to fetch genes for panel {panel_id}: {response.status_code}")
         return []

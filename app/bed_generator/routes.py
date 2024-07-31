@@ -51,5 +51,7 @@ def refresh_panels():
 def get_genes_by_panel(panel_id):
     include_amber = request.args.get('include_amber', 'false') == 'true'
     include_red = request.args.get('include_red', 'false') == 'true'
+    print(f"Fetching genes for panel {panel_id}, include_amber: {include_amber}, include_red: {include_red}")
     gene_list = fetch_genes_for_panel(panel_id, include_amber, include_red)
+    print(f"Fetched {len(gene_list)} genes")
     return jsonify(gene_list=gene_list)
