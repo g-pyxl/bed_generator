@@ -110,42 +110,26 @@
         }
     
         function loadPanelsFromDB() {
-            return fetch('/bed_generator/panels')
+            fetch('/bed_generator/panels')
                 .then(response => response.json())
                 .then(data => {
-                    var select = document.getElementById('panelDropdown');
-                    select.innerHTML = '<option value="">Select a panel...</option>';
-                    data.forEach(panel => {
-                        var option = new Option(panel.name, panel.panel_id);
-                        select.add(option);
-                    });
-                    if (data.length > 0) {
-                        document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
-                    }
+                    updatePanelDropdown(data);
                 })
                 .catch(error => console.error('Error loading panels from DB:', error));
         }
-    
+
         function refreshPanels() {
             var refreshButton = document.querySelector('.refresh-button');
             var buttonText = refreshButton.querySelector('.button-text');
             var loadingSpinner = refreshButton.querySelector('.loading-spinner');
-    
+
             buttonText.style.display = 'none';
             loadingSpinner.style.display = 'inline-block';
-    
+
             fetch('/bed_generator/refresh_panels')
                 .then(response => response.json())
                 .then(data => {
-                    var select = document.getElementById('panelDropdown');
-                    select.innerHTML = '<option value="">Select a panel...</option>';
-                    data.forEach(panel => {
-                        var option = new Option(panel.name, panel.panel_id);
-                        select.add(option);
-                    });
-                    if (data.length > 0) {
-                        document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
-                    }
+                    updatePanelDropdown(data);
                 })
                 .catch(error => console.error('Error refreshing panels:', error))
                 .finally(() => {
@@ -153,40 +137,25 @@
                     loadingSpinner.style.display = 'none';
                 });
         }
-    
-        function updateIdentifiers() {
-            var panelId = document.getElementById('panelDropdown').value;
-            var includeAmber = document.getElementById('includeAmber').checked;
-            var includeRed = document.getElementById('includeRed').checked;
-    
-            if (panelId) {
-                var url = `/bed_generator/get_genes_by_panel/${panelId}?include_amber=${includeAmber}&include_red=${includeRed}`;
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        var coloredGenes = data.gene_list.map(gene => {
-                            var color = '';
-                            if (gene.confidence === '3') {
-                                color = 'green';
-                            } else if (gene.confidence === '2') {
-                                color = 'orange';
-                            } else if (gene.confidence === '1') {
-                                color = 'red';
-                            }
-                            return `<span style="color: ${color};">${gene.symbol}</span>`;
-                        });
-                        document.getElementById('identifiers').innerHTML = coloredGenes.join(', ');
-                    })
-                    .catch(error => console.error('Error fetching gene list:', error));
+
+        function updatePanelDropdown(data) {
+            var select = document.getElementById('panelDropdown');
+            select.innerHTML = '<option value="">Select a panel...</option>';
+            data.forEach(panel => {
+                var option = new Option(panel.name, panel.panel_id);
+                select.add(option);
+            });
+            if (data.length > 0) {
+                document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
             }
         }
-    
+
         function filterPanels() {
             var input = document.getElementById('searchPanel');
             var filter = input.value.toUpperCase();
             var select = document.getElementById('panelDropdown');
             var options = select.options;
-    
+
             for (var i = 1; i < options.length; i++) {
                 var txtValue = options[i].textContent || options[i].innerText;
                 if (txtValue.toUpperCase().indexOf(filter) > -1) {

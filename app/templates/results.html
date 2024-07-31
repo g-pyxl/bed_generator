@@ -54,6 +54,26 @@
                 <input class="form-check-input" type="checkbox" id="chkAccession">
                 <label class="form-check-label" for="chkAccession">Accession</label>
             </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkExonID">
+                <label class="form-check-label" for="chkExonID">Exon ID</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkExonNumber">
+                <label class="form-check-label" for="chkExonNumber">Exon Number</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkTranscriptBiotype">
+                <label class="form-check-label" for="chkTranscriptBiotype">Transcript Biotype</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkMANETranscript">
+                <label class="form-check-label" for="chkMANETranscript">MANE Transcript</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkMANETranscriptType">
+                <label class="form-check-label" for="chkMANETranscriptType">MANE Transcript Type</label>
+            </div>
         </div>
         <div class="mb-3 table-wrapper">
             <table class="table table-bordered">
@@ -65,6 +85,11 @@
                         <th>EntrezID</th>
                         <th>Gene</th>
                         <th>Accession</th>
+                        <th>Exon ID</th>
+                        <th>Exon Number</th>
+                        <th>Transcript Biotype</th>
+                        <th>MANE Transcript</th>
+                        <th>MANE Transcript Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,6 +102,11 @@
                                 <td>{{ result.entrez_id }}</td>
                                 <td>{{ result.gene }}</td>
                                 <td>{{ result.accession }}</td>
+                                <td>{{ result.exon_id }}</td>
+                                <td>{{ result.exon_number }}</td>
+                                <td>{{ result.transcript_biotype }}</td>
+                                <td>{{ result.mane_transcript }}</td>
+                                <td>{{ result.mane_transcript_type }}</td>
                             </tr>
                         {% else %}
                             <tr>
@@ -86,6 +116,11 @@
                                 <td>{{ result.entrez_id }}</td>
                                 <td>{{ result.gene }}</td>
                                 <td>{{ result.accession }}</td>
+                                <td>{{ result.exon_id }}</td>
+                                <td>{{ result.exon_number }}</td>
+                                <td>{{ result.transcript_biotype }}</td>
+                                <td>{{ result.mane_transcript }}</td>
+                                <td>{{ result.mane_transcript_type }}</td>
                             </tr>
                         {% endif %}
                     {% endfor %}
@@ -176,6 +211,21 @@
                 if (selectedColumns.includes('accession')) {
                     line.push(result.accession);
                 }
+                if (selectedColumns.includes('exonID')) {
+                    line.push(result.exon_id);
+                }
+                if (selectedColumns.includes('exonNumber')) {
+                    line.push(result.exon_number);
+                }
+                if (selectedColumns.includes('transcriptBiotype')) {
+                    line.push(result.transcript_biotype);
+                }
+                if (selectedColumns.includes('maneTranscript')) {
+                    line.push(result.mane_transcript);
+                }
+                if (selectedColumns.includes('maneTranscriptType')) {
+                    line.push(result.mane_transcript_type);
+                }
                 content += line.join('\t') + '\n';
             }
             return content;
@@ -189,6 +239,11 @@
             if (document.getElementById('chkEntrezID').checked) columns.push('entrezID');
             if (document.getElementById('chkGene').checked) columns.push('gene');
             if (document.getElementById('chkAccession').checked) columns.push('accession');
+            if (document.getElementById('chkExonID').checked) columns.push('exonID');
+            if (document.getElementById('chkExonNumber').checked) columns.push('exonNumber');
+            if (document.getElementById('chkTranscriptBiotype').checked) columns.push('transcriptBiotype');
+            if (document.getElementById('chkMANETranscript').checked) columns.push('maneTranscript');
+            if (document.getElementById('chkMANETranscriptType').checked) columns.push('maneTranscriptType');
             return columns;
         }
 
