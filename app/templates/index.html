@@ -217,17 +217,9 @@
                             }
                             return `<span style="color: ${color};">${gene.symbol}</span>`;
                         });
-                        var identifiersDiv = document.getElementById('identifiers');
-                        identifiersDiv.innerHTML = coloredGenes.join(', ');
-                        // Clear the placeholder if it exists
-                        identifiersDiv.removeAttribute('data-placeholder');
+                        document.getElementById('identifiers').innerHTML = coloredGenes.join(', ');
                     })
                     .catch(error => console.error('Error fetching gene list:', error));
-            } else {
-                var identifiersDiv = document.getElementById('identifiers');
-                identifiersDiv.innerHTML = '';
-                // Restore the placeholder if needed
-                identifiersDiv.setAttribute('data-placeholder', 'Enter identifiers separated by commas, spaces, or new lines...');
             }
         }
 
