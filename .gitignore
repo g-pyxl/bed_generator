@@ -1,4 +1,4 @@
-/bed_generator/__pycache__/
+/app/bed_generator/__pycache__/
 *.pyc
 *.db
 transcript.db
