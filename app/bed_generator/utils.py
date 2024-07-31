@@ -322,7 +322,6 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
             if result:
                 results.append(result)
         else:
-            # Handling other identifiers such as gene IDs with padding
             cursor.execute("SELECT stable_id FROM genes WHERE name = ? AND assembly = ?", (identifier, assembly))
             gene_entry = cursor.fetchone()
             if gene_entry:
@@ -379,6 +378,14 @@ def process_identifiers(identifiers, coordinates, assembly, padding_5, padding_3
                         results.extend(result)
             else:
                 print(f"{identifier} not found in the database for assembly {assembly}.")
+                result = fetch_data_from_tark(identifier, assembly)
+                if result:
+                    for r in result:
+                        r['loc_start'] = max(0, r['loc_start'] - padding_5)
+                        r['loc_end'] += padding_3
+                    results.extend(result)
+                else:
+                    print(f"No data found for {identifier} from TARK API.")
     conn.close()
     return results
 
@@ -438,6 +445,9 @@ def fetch_data_from_tark(identifier, assembly):
         response = requests.get(search_url, params=params)
         if response.status_code == 200:
             data = response.json()
+            if not data:
+                print(f"No data found for {identifier} in TARK API.")
+                return None
             # Update DB
             print("Storing in db...")
             conn = connect_db()
@@ -475,10 +485,10 @@ def fetch_data_from_tark(identifier, assembly):
                 print("No results found for this identifier.")
                 return None
         else:
-            print(f"Failed to retrieve data: {response.status_code}")
+            print(f"Failed to retrieve data from TARK API: {response.status_code}")
             return None
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while fetching data from TARK API: {e}")
         return None
 
 def fetch_panels_from_panelapp():

@@ -28,6 +28,33 @@
                 <option value="hg19">hg19</option>
             </select>
         </div>
+        <div class="mb-3">
+            <h4>Select columns for BED file:</h4>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkChromosome" checked>
+                <label class="form-check-label" for="chkChromosome">Chromosome</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkStart" checked>
+                <label class="form-check-label" for="chkStart">Start</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkEnd" checked>
+                <label class="form-check-label" for="chkEnd">End</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkEntrezID">
+                <label class="form-check-label" for="chkEntrezID">EntrezID</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkGene">
+                <label class="form-check-label" for="chkGene">Gene</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkAccession">
+                <label class="form-check-label" for="chkAccession">Accession</label>
+            </div>
+        </div>
         <div class="mb-3 table-wrapper">
             <table class="table table-bordered">
                 <thead>
@@ -127,17 +154,42 @@
 
         function createBedContent(results) {
             var content = '';
+            var selectedColumns = getSelectedColumns();
             for (var i = 0; i < results.length; i++) {
                 var result = results[i];
-                if ('rsid' in result) {
-                    content += result.chromosome + '\t' + result.start + '\t' + result.end + '\t' +
-                            result.entrez_id + '\t' + result.gene + '\t' + result.accession + '\n';
-                } else {
-                    content += result.loc_region + '\t' + result.loc_start + '\t' + result.loc_end + '\t' +
-                            result.entrez_id + '\t' + result.gene + '\t' + result.accession + '\n';
+                var line = [];
+                if (selectedColumns.includes('chromosome')) {
+                    line.push('rsid' in result ? result.chromosome : result.loc_region);
                 }
+                if (selectedColumns.includes('start')) {
+                    line.push('rsid' in result ? result.start : result.loc_start);
+                }
+                if (selectedColumns.includes('end')) {
+                    line.push('rsid' in result ? result.end : result.loc_end);
+                }
+                if (selectedColumns.includes('entrezID')) {
+                    line.push(result.entrez_id);
+                }
+                if (selectedColumns.includes('gene')) {
+                    line.push(result.gene);
+                }
+                if (selectedColumns.includes('accession')) {
+                    line.push(result.accession);
+                }
+                content += line.join('\t') + '\n';
             }
             return content;
+        }
+
+        function getSelectedColumns() {
+            var columns = [];
+            if (document.getElementById('chkChromosome').checked) columns.push('chromosome');
+            if (document.getElementById('chkStart').checked) columns.push('start');
+            if (document.getElementById('chkEnd').checked) columns.push('end');
+            if (document.getElementById('chkEntrezID').checked) columns.push('entrezID');
+            if (document.getElementById('chkGene').checked) columns.push('gene');
+            if (document.getElementById('chkAccession').checked) columns.push('accession');
+            return columns;
         }
 
         function downloadBED() {
