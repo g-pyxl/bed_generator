@@ -109,7 +109,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="panelDropdown" class="form-label">Select a panel</label>
-                <select class="form-control" id="panelDropdown">
+                <select class="form-control" id="panelDropdown" onchange="updateIdentifiers()">
                     <option value="">Select a panel...</option>
                     {% for panel in panels %}
                         <option value="{{ panel.panel_id }}">{{ panel.name }}</option>
@@ -118,15 +118,15 @@
             </div>
             <div class="col-md-6">
                 <label for="searchPanel" class="form-label">Filter</label
-                <input type="text" id="searchPanel" class="form-control" placeholder="Type to search...">
+                <input type="text" id="searchPanel" class="form-control" placeholder="Type to search..." onkeyup="filterPanels()">
             </div>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="includeAmber">
+            <input class="form-check-input" type="checkbox" id="includeAmber" onchange="updateIdentifiers()">
             <label class="form-check-label" for="includeAmber">Include amber</label>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="includeRed">
+            <input class="form-check-input" type="checkbox" id="includeRed" onchange="updateIdentifiers()">
             <label class="form-check-label" for="includeRed">Include red</label>
         </div>
     </div>
@@ -139,44 +139,60 @@
             });
         }
 
-        function loadPanelsFromDB() {
-            return fetch('/bed_generator/panels')
+        function loadPanels() {
+            fetch('/panels')
                 .then(response => response.json())
                 .then(data => {
-                    updatePanelDropdown(data);
+                    var select = document.getElementById('panelDropdown');
+                    data.forEach(panel => {
+                        var option = new Option(panel.name, panel.panel_id);
+                        select.add(option);
+                    });
                 })
-                .catch(error => console.error('Error loading panels from DB:', error));
+                .catch(error => console.error('Error loading panels:', error));
         }
 
         function refreshPanels() {
-            var refreshButton = document.querySelector('.refresh-button');
-            var buttonText = refreshButton.querySelector('.button-text');
-            var loadingSpinner = refreshButton.querySelector('.loading-spinner');
-
-            buttonText.style.display = 'none';
-            loadingSpinner.style.display = 'inline-block';
-
-            fetch('/bed_generator/refresh_panels')
+            fetch('/refresh_panels')
                 .then(response => response.json())
                 .then(data => {
-                    updatePanelDropdown(data);
+                    var select = document.getElementById('panelDropdown');
+                    select.innerHTML = '<option value="">Select a panel...</option>';
+                    data.forEach(panel => {
+                        var option = new Option(panel.name, panel.panel_id);
+                        select.add(option);
+                    });
+                    document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
                 })
-                .catch(error => console.error('Error refreshing panels:', error))
-                .finally(() => {
-                    buttonText.style.display = 'inline';
-                    loadingSpinner.style.display = 'none';
-                });
+                .catch(error => console.error('Error refreshing panels:', error));
         }
 
-        function updatePanelDropdown(data) {
-            var select = document.getElementById('panelDropdown');
-            select.innerHTML = '<option value="">Select a panel...</option>';
-            data.forEach(panel => {
-                var option = new Option(panel.name, panel.panel_id);
-                select.add(option);
-            });
-            if (data.length > 0) {
-                document.getElementById('lastUpdated').textContent = 'Last updated: ' + data[0].last_updated;
+        function updateIdentifiers() {
+            var panelId = document.getElementById('panelDropdown').value;
+            var includeAmber = document.getElementById('includeAmber').checked;
+            var includeRed = document.getElementById('includeRed').checked;
+
+            if (panelId) {
+                var url = `/get_genes_by_panel/${panelId}?include_amber=${includeAmber}&include_red=${includeRed}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        var coloredGenes = data.gene_list.map(gene => {
+                            var color = '';
+                            if (gene.confidence === '3') {
+                                color = 'green';
+                            } else if (gene.confidence === '2') {
+                                color = 'orange';
+                            } else if (gene.confidence === '1') {
+                                color = 'red';
+                            }
+                            return `<span style="color: ${color};">${gene.symbol}</span>`;
+                        });
+                        document.getElementById('identifiers').innerHTML = coloredGenes.join(', ');
+                    })
+                    .catch(error => console.error('Error fetching gene list:', error));
+            } else {
+                loadPanels();  // Load panels when the dropdown is first interacted with
             }
         }
 
@@ -196,73 +212,19 @@
             }
         }
 
-        function updateIdentifiers() {
-            var panelId = document.getElementById('panelDropdown').value;
-            var includeAmber = document.getElementById('includeAmber').checked;
-            var includeRed = document.getElementById('includeRed').checked;
+        document.querySelector('form').addEventListener('submit', function() {
+            var generateButton = document.getElementById('generateButton');
+            var buttonText = document.getElementById('buttonText');
+            var loadingMessage = document.getElementById('loadingMessage');
+            var loadingSpinner = document.getElementById('loadingSpinner');
 
-            console.log('Panel ID:', panelId);
-            console.log('Include Amber:', includeAmber);
-            console.log('Include Red:', includeRed);
-
-            if (panelId) {
-                var url = `/bed_generator/get_genes_by_panel/${panelId}?include_amber=${includeAmber}&include_red=${includeRed}`;
-                console.log('Fetching from URL:', url);
-                fetch(url)
-                    .then(response => {
-                        console.log('Response status:', response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Received data:', data);
-                        var geneList = data.gene_list || [];
-                        var coloredGenes = geneList.map(gene => {
-                            var color = '';
-                            if (gene.confidence === '3') {
-                                color = 'green';
-                            } else if (gene.confidence === '2') {
-                                color = 'orange';
-                            } else if (gene.confidence === '1') {
-                                color = 'red';
-                            }
-                            return `<span style="color: ${color};">${gene.symbol}</span>`;
-                        });
-                        document.getElementById('identifiers').innerHTML = coloredGenes.join(', ');
-                    })
-                    .catch(error => console.error('Error fetching gene list:', error));
-            } else {
-                console.log('No panel selected, loading panels');
-                loadPanelsFromDB();
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            loadPanelsFromDB();
-            togglePaddingInput();
-            
-            // Add event listeners
-            document.getElementById('panelDropdown').addEventListener('change', updateIdentifiers);
-            document.getElementById('includeAmber').addEventListener('change', updateIdentifiers);
-            document.getElementById('includeRed').addEventListener('change', updateIdentifiers);
-            document.getElementById('searchPanel').addEventListener('keyup', filterPanels);
-            
-            // Add event listener for form submission
-            document.querySelector('form').addEventListener('submit', function(event) {
-                event.preventDefault();
-                var generateButton = document.getElementById('generateButton');
-                var buttonText = document.getElementById('buttonText');
-                var loadingMessage = document.getElementById('loadingMessage');
-                var loadingSpinner = document.getElementById('loadingSpinner');
-
-                generateButton.disabled = true;
-                buttonText.style.display = 'none';
-                loadingMessage.style.display = 'inline';
-                loadingSpinner.style.display = 'inline-block';
-
-                // Submit the form
-                this.submit();
-            });
+            generateButton.disabled = true;
+            buttonText.style.display = 'none';
+            loadingMessage.style.display = 'inline';
+            loadingSpinner.style.display = 'inline-block';
         });
+
+        document.addEventListener('DOMContentLoaded', loadPanels);
     </script>
 </body>
 </html>

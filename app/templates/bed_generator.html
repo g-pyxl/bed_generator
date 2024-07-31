@@ -7,7 +7,7 @@
     <form method="post" id="bedGeneratorForm">
         <div class="mb-3">
             <label for="identifiers" class="form-label">Identifiers (gene symbol or rsID)</label>
-            <div class="form-control" id="identifiers" contenteditable="true" data-placeholder="Enter identifiers separated by commas, spaces, or new lines..."></div>
+            <textarea class="form-control" id="identifiers" name="identifiers" rows="3" placeholder="Enter identifiers separated by commas, spaces, or new lines..."></textarea>
         </div>
         <div class="mb-3">
             <label for="coordinates" class="form-label">Custom Genomic Range(s)</label>
@@ -101,16 +101,16 @@
             }
             return null; // No error
         }
-    
+
         function togglePaddingInput() {
             var paddingInputs = document.querySelectorAll('.padding-input');
             paddingInputs.forEach(input => {
                 input.style.display = document.getElementById('paddingCheckbox').checked ? 'block' : 'none';
             });
         }
-    
+
         function loadPanelsFromDB() {
-            fetch('/bed_generator/panels')
+            return fetch('/bed_generator/panels')
                 .then(response => response.json())
                 .then(data => {
                     updatePanelDropdown(data);
@@ -165,81 +165,73 @@
                 }
             }
         }
-    
+
+        function updateIdentifiers() {
+            var panelId = document.getElementById('panelDropdown').value;
+            var includeAmber = document.getElementById('includeAmber').checked;
+            var includeRed = document.getElementById('includeRed').checked;
+
+            console.log('Panel ID:', panelId);
+            console.log('Include Amber:', includeAmber);
+            console.log('Include Red:', includeRed);
+
+            if (panelId) {
+                var url = `/bed_generator/get_genes_by_panel/${panelId}?include_amber=${includeAmber}&include_red=${includeRed}`;
+                console.log('Fetching from URL:', url);
+                fetch(url)
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received data:', data);
+                        var geneList = data.gene_list || [];
+                        var coloredGenes = geneList.map(gene => {
+                            var color = '';
+                            if (gene.confidence === '3') {
+                                color = 'green';
+                            } else if (gene.confidence === '2') {
+                                color = 'orange';
+                            } else if (gene.confidence === '1') {
+                                color = 'red';
+                            }
+                            return `<span style="color: ${color};">${gene.symbol}</span>`;
+                        });
+                        document.getElementById('identifiers').value = coloredGenes.map(gene => gene.replace(/<[^>]+>/g, '')).join(', ');
+                    })
+                    .catch(error => console.error('Error fetching gene list:', error));
+            } else {
+                console.log('No panel selected, loading panels');
+                loadPanelsFromDB();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadPanelsFromDB();
             togglePaddingInput();
-    
-            document.getElementById('bedGeneratorForm').addEventListener('submit', function(event) {
+            
+            // Add event listeners
+            document.getElementById('panelDropdown').addEventListener('change', updateIdentifiers);
+            document.getElementById('includeAmber').addEventListener('change', updateIdentifiers);
+            document.getElementById('includeRed').addEventListener('change', updateIdentifiers);
+            document.getElementById('searchPanel').addEventListener('keyup', filterPanels);
+            
+            // Add event listener for form submission
+            document.querySelector('form').addEventListener('submit', function(event) {
                 event.preventDefault();
-    
-                const coordinatesInput = document.getElementById('coordinates');
-                const coordinatesError = document.getElementById('coordinatesError');
-                const coordinates = coordinatesInput.value.trim();
-                
-                let hasError = false;
-    
-                if (coordinates) {
-                    const error = validateCoordinates(coordinates);
-                    if (error) {
-                        coordinatesInput.classList.add('is-invalid');
-                        coordinatesError.textContent = error;
-                        coordinatesError.style.display = 'block';
-                        hasError = true;
-                    } else {
-                        coordinatesInput.classList.remove('is-invalid');
-                        coordinatesError.style.display = 'none';
-                    }
-                }
-    
-                if (!hasError) {
-                    const generateButton = document.getElementById('generateButton');
-                    const buttonText = document.getElementById('buttonText');
-                    const loadingMessage = document.getElementById('loadingMessage');
-                    const loadingSpinner = document.getElementById('loadingSpinner');
-    
-                    generateButton.disabled = true;
-                    buttonText.style.display = 'none';
-                    loadingMessage.style.display = 'inline';
-                    loadingSpinner.style.display = 'inline-block';
-    
-                    var identifiersDiv = document.getElementById('identifiers');
-                    var identifiers = identifiersDiv.textContent.trim();
-    
-                    var form = event.target;
-                    var formData = new FormData(form);
-                    formData.append('identifiers', identifiers);
-    
-                    fetch(form.action, {
-                        method: form.method,
-                        body: formData
-                    })
-                    .then(response => {
-                        if (response.redirected) {
-                            window.location.href = response.url;
-                        } else {
-                            return response.json();
-                        }
-                    })
-                    .then(data => {
-                        if (data && data.error) {
-                            alert(data.error);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while processing your request. Please try again.');
-                    })
-                    .finally(() => {
-                        generateButton.disabled = false;
-                        buttonText.style.display = 'inline';
-                        loadingMessage.style.display = 'none';
-                        loadingSpinner.style.display = 'none';
-                    });
-                }
+                var generateButton = document.getElementById('generateButton');
+                var buttonText = document.getElementById('buttonText');
+                var loadingMessage = document.getElementById('loadingMessage');
+                var loadingSpinner = document.getElementById('loadingSpinner');
+
+                generateButton.disabled = true;
+                buttonText.style.display = 'none';
+                loadingMessage.style.display = 'inline';
+                loadingSpinner.style.display = 'inline-block';
+
+                // Submit the form
+                this.submit();
             });
         });
     </script>
-    {% endblock %}
-</body>
-</html>
+{% endblock %}
